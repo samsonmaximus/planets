@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Four Planet Candidates in 3D</title>
+<meta name="description" content="Fly around four exoplanet candidates found by Samson Fraser in public TESS and HARPS data. Real parameters, live transit and velocity curves, and the predicted dates that will test them.">
+<meta property="og:title" content="Four planet candidates in 3D">
+<meta property="og:description" content="HD 297396 b, TOI-678, GJ 237 and TOI-5997: real orbits, live light curves and preregistered predictions.">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="https://samsonmaximus.github.io/planets/og.png">
+<meta name="twitter:image" content="https://samsonmaximus.github.io/planets/og.png">
+<meta property="og:url" content="https://samsonmaximus.github.io/planets/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05070d; --panel:rgba(12,16,26,.82); --line:rgba(255,255,255,.10); --text:#e8ecf4; --mute:#93a0b8;
+  --accent:#ffb454; --cand:#5ad1ff; --other:#9aa5b8; --good:#7ee2a8; --warn:#ffcf6b;
+  --font:'Inter',system-ui,-apple-system,Segoe UI,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden}
+#scene{position:fixed;inset:0}
+a{color:var(--cand)}
+.top{position:fixed;top:0;left:0;right:0;display:flex;gap:10px;align-items:center;padding:12px 16px;z-index:5;
+  background:linear-gradient(#05070de6,#05070d00);flex-wrap:wrap}
+.brand{font-weight:600;font-size:15px;letter-spacing:.2px;margin-right:6px;white-space:nowrap}
+.brand span{color:var(--mute);font-weight:400}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);padding:7px 12px;border-radius:999px;
+  font:500 13px var(--font);cursor:pointer}
+.tab[aria-selected=true]{background:var(--text);color:#0a0d14;border-color:var(--text)}
+.card{position:fixed;z-index:4;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#info{top:64px;left:16px;width:340px;max-height:calc(100% - 300px);overflow:auto;padding:16px 16px 14px}
+#info h1{font-size:20px;margin:0 0 2px;font-weight:600}
+#info .sub{color:var(--mute);font-size:13px;margin-bottom:10px}
+.badge{display:inline-block;font:500 11px var(--mono);padding:3px 8px;border-radius:999px;border:1px solid var(--warn);color:var(--warn);margin-bottom:10px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0 0 12px;font-size:13px}
+dt{color:var(--mute)} dd{margin:0;font-family:var(--mono);font-size:12.5px}
+.next{border-top:1px solid var(--line);padding-top:10px;margin-top:4px;font-size:13px}
+.next b{font-family:var(--mono);font-weight:500;color:var(--accent)}
+.next .cd{font-family:var(--mono);font-size:12px;color:var(--mute)}
+.blurb{font-size:13px;line-height:1.5;color:#cfd6e4;margin:10px 0}
+.links{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.links a{font-size:12px;text-decoration:none;border:1px solid var(--line);padding:5px 9px;border-radius:8px;color:var(--text)}
+.links a:hover{border-color:var(--cand)}
+.hostsw{display:flex;gap:6px;margin:4px 0 10px}
+.hostsw button{flex:1}
+#bottom{left:16px;right:16px;bottom:16px;padding:10px 12px 8px}
+.ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text);border-radius:8px;padding:6px 10px;font:500 12.5px var(--font);cursor:pointer}
+.btn:hover{border-color:rgba(255,255,255,.3)}
+.btn.on{background:rgba(90,209,255,.16);border-color:var(--cand)}
+#clock{font:500 12.5px var(--mono);color:var(--text);margin-left:auto;white-space:nowrap}
+select.btn{appearance:none;padding-right:10px}
+#lc{width:100%;height:150px;display:block}
+.legend{display:flex;gap:14px;font-size:11.5px;color:var(--mute);margin-top:2px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.labels{position:fixed;inset:0;pointer-events:none;z-index:3}
+.lbl{position:absolute;transform:translate(10px,-50%);font:500 11.5px var(--mono);color:var(--text);white-space:nowrap;
+  text-shadow:0 0 6px #000,0 0 2px #000}
+.lbl.other{color:var(--other)} .lbl.star{color:var(--accent)}
+.hint{position:fixed;right:16px;top:64px;z-index:4;font-size:12px;color:var(--mute);text-align:right;max-width:230px;line-height:1.45}
+#collapse{display:none}
+@media (max-width:760px){
+  .brand{display:none}
+  #info{left:8px;right:8px;width:auto;top:56px;max-height:38vh;padding:12px}
+  #info.min .body{display:none}
+  #collapse{display:inline-block;float:right}
+  #bottom{left:8px;right:8px;bottom:8px}
+  #lc{height:110px}
+  .hint{display:none}
+  .top{padding:10px 8px;flex-wrap:nowrap}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .tab{flex:none}
+  .tab{padding:6px 10px;font-size:12px}
+}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div class="labels" id="labels"></div>
+
+<div class="top">
+  <div class="brand">Planet candidates <span>· Samson Fraser</span></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+</div>
+
+<div class="card" id="info"></div>
+
+<div class="hint">Drag to orbit · scroll or pinch to zoom<br>Planet and star sizes are enlarged unless “True scale” is on.</div>
+
+<div class="card" id="bottom">
+  <div class="ctrl">
+    <button class="btn" id="play">Pause</button>
+    <select class="btn" id="speed" aria-label="Speed">
+      <option value="0.0416667">1 hour / s</option>
+      <option value="0.25">6 hours / s</option>
+      <option value="1" selected>1 day / s</option>
+      <option value="5">5 days / s</option>
+      <option value="20">20 days / s</option>
+    </select>
+    <button class="btn" id="now">Now</button>
+    <button class="btn" id="jump">Next transit ▸</button>
+    <button class="btn" id="earth">View from Earth</button>
+    <button class="btn" id="scale">True scale</button>
+    <button class="btn" id="noise">TESS noise</button>
+    <div id="clock"></div>
+  </div>
+  <canvas id="lc"></canvas>
+  <div class="legend" id="legend"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// ---------------------------------------------------------------------------
+// Data. Candidate values are from the two preprints:
+//  Fraser 2026a, doi:10.5281/zenodo.23249265 (TOI-678, GJ 237, TOI-5997; Tables 2 and 4)
+//  Fraser 2026b, doi:10.5281/zenodo.23249329 (HD 297396 b; Tables 2 and 3)
+// Companion signals use the periods in those papers and epochs from the NASA Exoplanet
+// Archive TOI table; their impact parameters are not measured here and are set to 0.3.
+// ---------------------------------------------------------------------------
+const AU_RSUN = 215.032, RE_RSUN = 0.0091577;
+const PREREG = "https://doi.org/10.5281/zenodo.PREREG";   // <- replace with the predictions DOI
+const kepA = (P, M) => Math.cbrt(M * Math.pow(P / 365.25, 2)); // au
+
+const SYSTEMS = [
+ { id:'hd', name:'HD 297396 b', sub:'K dwarf · 46 pc · Carina', kind:'rv',
+   star:{R:0.739, M:0.776, T:4636, L:0.2275},
+   doi:'https://doi.org/10.5281/zenodo.23249329', code:'https://github.com/samsonmaximus/hd297396b',
+   blurb:'Found as a 4.27-day wobble in 18 years of public HARPS velocities. It holds the same phase over 1,531 orbits, which star spots on a 30–50-day rotation do not do: none of 150,000 simulated spot signals matches it. It does not transit, so only a minimum mass is known.',
+   facts:[['Period','4.26837 ± 0.00027 d'],['RV amplitude K','5.52 ± 0.84 m/s'],['Min. mass','11.8 ± 1.9 M⊕'],['Orbit','0.0473 au · circular'],['Temperature','≈ 883 K'],['False-alarm prob.','1.4 × 10⁻³ (all epochs)']],
+   planets:[
+     {name:'HD 297396 b', cand:true, P:4.26837, T0:2456298.34, a:0.04734, Rp:3.4, incl:75, rvK:5.52, note:'radius from mass–radius relation; inclination unknown (< 85.7°), drawn at 75°'},
+     {name:'TOI-6263.01', cand:false, P:3.0178746, T0:2460009.249357, Rp:0.93, b:0.3, note:'separate TESS candidate'}
+   ],
+   next:{label:'Next conjunction', sigma:'± 0.35 d (0.08 of an orbit)', test:'One season of velocities from a second spectrograph (ESPRESSO, NIRPS) at the predicted phases decides it.'}
+ },
+ { id:'toi678', name:'TOI-678 (130 d)', sub:'G dwarf · 207 pc', kind:'transit',
+   star:{R:1.088, M:1.036, T:5536, L:1.00},
+   doi:'https://doi.org/10.5281/zenodo.23249265', code:'https://github.com/samsonmaximus/tess-three-candidates',
+   blurb:'Three transits in 2019, 2023 and 2025 pin a 130.1-day orbit: a sub-Neptune getting about 4× the sunlight Earth does, outside an already known 11.3-day candidate. Only a handful of transiting planets this size orbit Sun-like stars this bright on periods over 100 days.',
+   facts:[['Period','130.1455 ± 0.0007 d'],['Radius','3.60 ± 0.28 R⊕'],['Depth','≈ 0.93 ppt · 6.05 h'],['Insolation','3.9 × Earth'],['Transits seen','3 (S8, S61, S90)'],['False-positive prob.','0.021']],
+   planets:[
+     {name:'TOI-678 (130 d)', cand:true, P:130.1455, T0:2459972.2556, Rp:3.60, b:0.81, T14:6.05},
+     {name:'TOI-678.01', cand:false, P:11.329893, T0:2458493.024505, Rp:3.33, b:0.3, note:'known TOI'}
+   ],
+   next:{label:'Next transit', sigma:'± 16 min', test:'Seeing-limited photometry of the neighbours at a transit removes most of the remaining false-positive probability.'}
+ },
+ { id:'gj237', name:'GJ 237 (29.3 d)', sub:'Pair of M dwarfs 3.3″ apart · 24 pc', kind:'transit', hosts:true,
+   starA:{R:0.588, M:0.578, T:3864, L:0.069}, starB:{R:0.411, M:0.404, T:3465, L:0.0219},
+   doi:'https://doi.org/10.5281/zenodo.23249265', code:'https://github.com/samsonmaximus/tess-three-candidates',
+   blurb:'Seven transits over five years from a pair of nearby red dwarfs. The signal is in the system, but which star it orbits is not known yet: around B it would receive about the sunlight Earth does. One ground-based light curve that separates the two stars settles it.',
+   factsA:[['Period','29.28559 ± 0.00006 d'],['Radius (host A)','1.88 ± 0.11 R⊕'],['Insolation','2.9 × Earth'],['Depth in A’s light','≈ 0.86 ppt · 2.1 h'],['Transits seen','7'],['P(planet in system)','0.983']],
+   factsB:[['Period','29.28558 ± 0.00006 d'],['Radius (host B)','2.39 ± 0.14 R⊕'],['Insolation','1.16 × Earth'],['Depth in B’s light','≈ 2.8 ppt · 2.2 h'],['Transits seen','7'],['P(planet in system)','0.983']],
+   planetsA:[{name:'GJ 237 candidate', cand:true, P:29.28559, T0:2460334.9927, Rp:1.88, b:0.88, T14:2.14}],
+   planetsB:[{name:'GJ 237 candidate', cand:true, P:29.28558, T0:2460334.9926, Rp:2.39, b:0.79, T14:2.17}],
+   next:{label:'Next transit', sigma:'± 8 min', test:'A 1–2 m telescope that resolves A and B during one transit names the host.'}
+ },
+ { id:'toi5997', name:'TOI-5997 c', sub:'K dwarf · 47 pc', kind:'transit',
+   star:{R:0.687, M:0.686, T:4717, L:0.211},
+   doi:'https://doi.org/10.5281/zenodo.23249265', code:'https://github.com/samsonmaximus/tess-three-candidates',
+   blurb:'Nine transits of a 1.3-Earth-radius world beside the validated planet TOI-5997 b. Its false-positive probability is already below the usual validation bar, but its S/N is modest, so it stays a candidate. TESS will look again in May–June 2027 and should see three more transits; the times and pass/fail rules were registered in advance.',
+   facts:[['Period','14.21604 ± 0.00005 d'],['Radius','1.27 ± 0.09 R⊕'],['Depth','≈ 0.29 ppt · 3.16 h'],['Insolation','21 × Earth'],['Transits seen','9'],['False-positive prob.','3.7 × 10⁻⁴']],
+   planets:[
+     {name:'TOI-5997 c', cand:true, P:14.21604, T0:2459758.2834, Rp:1.27, b:0.33, T14:3.16},
+     {name:'TOI-5997 b', cand:false, P:5.654997, T0:2458985.158761, Rp:1.44, b:0.3, note:'validated planet'}
+   ],
+   next:{label:'Next transit', sigma:'± 10 min', test:'TESS Sectors 117–118: transits due 2027 May 24, Jun 7 and Jun 21.'}
+ }
+];
+
+// ---------------------------------------------------------------------------
+const $ = s => document.querySelector(s);
+const jdNow = () => Date.now()/86400000 + 2440587.5 + 69.184/86400; // ≈ TDB
+const jdToDate = jd => new Date((jd - 2440587.5 - 69.184/86400) * 86400000);
+const fmtUTC = jd => { const d=jdToDate(jd); return d.toISOString().slice(0,16).replace('T',' ')+' UTC'; };
+
+let sysIdx = 0, host = 'A', simJD = jdNow(), playing = true, speed = 1, trueScale = false, noiseOn = false, earthView = false;
+
+// three.js scene ---------------------------------------------------------------
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+$('#scene').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 1e-6, 5000);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+
+// star field
+{ const g = new THREE.BufferGeometry(), n = 4000, p = new Float32Array(n*3), c = new Float32Array(n*3);
+  for (let i=0;i<n;i++){ const u=Math.random()*2-1, th=Math.random()*Math.PI*2, r=1500;
+    p[i*3]=r*Math.sqrt(1-u*u)*Math.cos(th); p[i*3+1]=r*u; p[i*3+2]=r*Math.sqrt(1-u*u)*Math.sin(th);
+    const b=.4+Math.random()*.6; c[i*3]=b; c[i*3+1]=b; c[i*3+2]=b*(.85+Math.random()*.3); }
+  g.setAttribute('position', new THREE.BufferAttribute(p,3)); g.setAttribute('color', new THREE.BufferAttribute(c,3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({size:1.6, vertexColors:true, sizeAttenuation:false}))); }
+
+function tempColor(T){ // approximate blackbody tint
+  const t=T/100; let r,g,b;
+  r = t<=66 ? 255 : 329.7*Math.pow(t-60,-0.1332);
+  g = t<=66 ? 99.47*Math.log(t)-161.1 : 288.1*Math.pow(t-60,-0.0755);
+  b = t>=66 ? 255 : (t<=19 ? 0 : 138.5*Math.log(t-10)-305.0);
+  const cl=v=>Math.max(0,Math.min(255,v))/255; return new THREE.Color(cl(r),cl(g),cl(b));
+}
+function glowTexture(){ const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d');
+  const gr=x.createRadialGradient(64,64,0,64,64,64); gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(.25,'rgba(255,255,255,.45)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=gr; x.fillRect(0,0,128,128); return new THREE.CanvasTexture(c); }
+const GLOW = glowTexture();
+function planetTexture(hue){ const c=document.createElement('canvas'); c.width=256; c.height=128; const x=c.getContext('2d');
+  for(let y=0;y<128;y++){ const v=Math.sin(y*.18+Math.sin(y*.05)*2)*.5+.5; x.fillStyle=`hsl(${hue},${30+v*25}%,${30+v*28}%)`; x.fillRect(0,y,256,1); }
+  return new THREE.CanvasTexture(c); }
+
+let world = null, bodies = [], labelEls = [];
+const light = new THREE.PointLight(0xffffff, 1.6, 0, 0); scene.add(light);
+scene.add(new THREE.AmbientLight(0x404858, .35));
+
+function currentStar(){ const S=SYSTEMS[sysIdx]; return S.hosts ? (host==='A'?S.starA:S.starB) : S.star; }
+function currentPlanets(){ const S=SYSTEMS[sysIdx]; return S.hosts ? (host==='A'?S.planetsA:S.planetsB) : S.planets; }
+
+function inclOf(p, star){ if (p.incl!=null) return p.incl*Math.PI/180;
+  const a = p.a ?? kepA(p.P, star.M); const ci = (p.b ?? 0.3) * star.R / (a*AU_RSUN); return Math.acos(Math.min(1,ci)); }
+
+// visual scale factors (true scale = 1)
+function sFactors(){ if (trueScale) return {star:1, planet:1};
+  const star=currentStar(), ps=currentPlanets(), Rs=star.R/AU_RSUN;
+  const minA=Math.min(...ps.map(p=>p.a ?? kepA(p.P, star.M))), maxRp=Math.max(...ps.map(p=>p.Rp))*RE_RSUN/AU_RSUN;
+  const fs=Math.max(1, Math.min(4, 0.12*minA/Rs)); const fp=Math.max(1, Math.min(60, 0.45*Rs*fs/maxRp));
+  return {star:fs, planet:fp}; }
+
+function build(){
+  if (world) { scene.remove(world); world.traverse(o=>{o.geometry&&o.geometry.dispose(); o.material&&o.material.dispose&&o.material.dispose();}); }
+  world = new THREE.Group(); scene.add(world); bodies = [];
+  $('#labels').innerHTML = ''; labelEls = [];
+  const S = SYSTEMS[sysIdx], star = currentStar(), planets = currentPlanets(), f = sFactors();
+  const Rs = star.R / AU_RSUN; // au
+  const col = tempColor(star.T);
+  // star
+  const sm = new THREE.Mesh(new THREE.SphereGeometry(Rs*f.star, 64, 32), new THREE.MeshBasicMaterial({color:col}));
+  world.add(sm);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW, color:col, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending}));
+  glow.scale.setScalar(Rs*f.star*(earthView?2.4:7)); world.add(glow);
+  light.color = col;
+  addLabel(S.hosts ? `GJ 237 ${host}` : (S.id==='hd'?'HD 297396':S.id==='toi678'?'TOI-678':'TOI-5997'), ()=>new THREE.Vector3(0,Rs*f.star*1.3,0), 'star');
+  // rough habitable zone band (conservative, Kopparapu-style flux limits)
+  const hzIn = Math.sqrt(star.L/1.1), hzOut = Math.sqrt(star.L/0.36);
+  const hz = new THREE.Mesh(new THREE.RingGeometry(hzIn, hzOut, 160), new THREE.MeshBasicMaterial({color:0x2fbf71, transparent:true, opacity:.07, side:THREE.DoubleSide, depthWrite:false}));
+  hz.rotation.x = -Math.PI/2; world.add(hz);
+  addLabel('habitable zone (rough)', ()=>new THREE.Vector3(-(hzIn+hzOut)/2*0.7071,0,(hzIn+hzOut)/2*0.7071), 'other');
+  // planets
+  let maxA = 0;
+  planets.forEach((p,i)=>{
+    const a = p.a ?? kepA(p.P, star.M); maxA = Math.max(maxA, a);
+    const inc = inclOf(p, star);
+    const grp = new THREE.Group(); grp.rotation.x = -(Math.PI/2 - inc); // tilt orbit so line of sight (+z) is near the plane
+    // orbit line
+    const pts=[]; for(let k=0;k<=256;k++){ const th=k/256*Math.PI*2; pts.push(new THREE.Vector3(a*Math.sin(th),0,a*Math.cos(th))); }
+    const ol = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color:p.cand?0x5ad1ff:0x6b7486, transparent:true, opacity:p.cand?.75:.45}));
+    grp.add(ol); world.add(grp);
+    const rp = p.Rp*RE_RSUN/AU_RSUN*f.planet;
+    const pm = new THREE.Mesh(new THREE.SphereGeometry(rp, 48, 24), new THREE.MeshStandardMaterial({map:planetTexture(p.cand?(S.id==='toi678'?200:S.id==='hd'?28:S.id==='gj237'?18:190):220), roughness:.9, metalness:0}));
+    grp.add(pm);
+    bodies.push({p, a, inc, grp, mesh:pm});
+    addLabel(p.name, ()=>{ const v=new THREE.Vector3(); pm.getWorldPosition(v); return v; }, p.cand?'':'other');
+  });
+  // the other star of GJ 237
+  if (S.hosts){ const other = host==='A'?S.starB:S.starA; const d = 79; // au projected
+    const os = new THREE.Sprite(new THREE.SpriteMaterial({map:GLOW, color:tempColor(other.T), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending}));
+    os.position.set(-d*0.6, 0, -d*0.8); os.scale.setScalar(other.R/AU_RSUN*f.star*12+1.5); world.add(os);
+    addLabel(`GJ 237 ${host==='A'?'B':'A'} · 79 au away`, ()=>os.position.clone(), 'star'); }
+  // line of sight arrow
+  const arr = new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(0,0,maxA*1.15), maxA*0.35, 0xffb454, maxA*0.06, maxA*0.03);
+  arr.visible=!earthView; world.add(arr); if(!earthView) addLabel('to Earth', ()=>new THREE.Vector3(0,0,maxA*1.55), 'star');
+  world.userData.maxA = maxA; world.userData.Rs = Rs;
+  if (!earthView) frameDefault(); else frameEarth();
+  renderInfo(); renderLegend();
+}
+function applyOffset(){ const w=innerWidth,h=innerHeight;
+  if (earthView && w>760) camera.setViewOffset(w,h,-Math.round(w*0.12),Math.round(h*0.05),w,h); else camera.clearViewOffset(); }
+function settle(){ const d=controls.enableDamping; controls.enableDamping=false; controls.autoRotate=false; controls.update(); controls.enableDamping=d; }
+function frameDefault(){ settle(); const m=world.userData.maxA; camera.fov=45; camera.near=m*1e-4; camera.far=m*400; camera.updateProjectionMatrix();
+  const off = innerWidth>760 ? -m*0.45 : 0; camera.position.set(m*1.5+off, m*1.15, m*1.9); controls.target.set(off,0,0); controls.update(); applyOffset(); }
+function frameEarth(){ // far out along the line of sight with a narrow field, so the star fills the view
+  settle(); const Rs=world.userData.Rs*sFactors().star, D=world.userData.maxA*60;
+  camera.fov = 2*Math.atan(2.3*Rs/D)*180/Math.PI; camera.near=D*0.3; camera.far=D*3; camera.updateProjectionMatrix();
+  camera.position.set(0,0,D); controls.target.set(0,0,0); controls.update(); applyOffset(); }
+
+function addLabel(text, posFn, cls){ const el=document.createElement('div'); el.className='lbl '+(cls||''); el.textContent=text; $('#labels').appendChild(el); labelEls.push({el,posFn}); }
+
+// position of a planet at time t (orbit frame; transit when the planet is at +z)
+function phaseAngle(p, t){ return 2*Math.PI*((t - p.T0)/p.P); }
+function placeBodies(t){ bodies.forEach(B=>{ const th=phaseAngle(B.p,t); B.mesh.position.set(B.a*Math.sin(th),0,B.a*Math.cos(th)); B.mesh.rotation.y = th*3; }); }
+
+// --- transit model: uniform-source overlap × quadratic limb darkening at the planet's position
+const U1=0.45, U2=0.2, NORM=1-U1/3-U2/6;
+function overlap(r,k){ if (r>=1+k) return 0; if (r<=1-k) return Math.PI*k*k; if (r<=k-1) return Math.PI;
+  const k0=Math.acos((r*r+k*k-1)/(2*r*k)), k1=Math.acos((r*r+1-k*k)/(2*r));
+  return k*k*k0 + k1 - 0.5*Math.sqrt(Math.max(0,4*r*r-(1+r*r-k*k)**2)); }
+function deficit(p, star, t){ // fractional flux drop (true geometry)
+  const a = (p.a ?? kepA(p.P, star.M))*AU_RSUN/star.R; const inc=inclOf(p,star); const th=phaseAngle(p,t);
+  const z = a*Math.cos(th)*Math.sin(inc); if (z<=0) return 0;
+  const x = a*Math.sin(th), y = a*Math.cos(th)*Math.cos(inc); const r=Math.hypot(x,y), k=p.Rp*RE_RSUN/star.R;
+  const A=overlap(r,k); if (!A) return 0; const mu=Math.sqrt(Math.max(0,1-Math.min(r,1)**2)); const I=1-U1*(1-mu)-U2*(1-mu)**2;
+  return A/Math.PI*I/NORM; }
+function rv(p,t){ return -p.rvK*Math.sin(phaseAngle(p,t)); }
+
+// deterministic noise so the curve doesn't flicker
+function hashN(i){ let x=Math.sin(i*12.9898)*43758.5453; x-=Math.floor(x); let y=Math.sin(i*78.233)*12543.1234; y-=Math.floor(y);
+  return Math.sqrt(-2*Math.log(x+1e-9))*Math.cos(2*Math.PI*y); }
+const SCATTER = {toi678:1662, gj237:1066, toi5997:713}; // 2-min ppm, Table 1 of Fraser 2026a
+
+// --- light-curve / RV panel ---------------------------------------------------
+const cv = $('#lc'), cx = cv.getContext('2d');
+function drawPanel(){
+  const dpr=Math.min(devicePixelRatio,2), W=cv.clientWidth, H=cv.clientHeight; if (cv.width!==W*dpr){cv.width=W*dpr; cv.height=H*dpr;}
+  cx.setTransform(dpr,0,0,dpr,0,0); cx.clearRect(0,0,W,H);
+  const S=SYSTEMS[sysIdx], star=currentStar(), planets=currentPlanets(), L=46, R=8, T=10, Bm=20, pw=W-L-R, ph=H-T-Bm;
+  cx.font='11px JetBrains Mono, monospace'; cx.fillStyle='#93a0b8'; cx.strokeStyle='rgba(255,255,255,.08)';
+  let span, ymin, ymax, ylab, f;
+  if (S.kind==='rv'){ span = 3*planets[0].P; ymin=-9; ymax=9; ylab='m/s';
+    f = t => rv(planets[0], t); }
+  else { const main=planets[0]; span=Math.max(1, main.T14/24*8);
+    let depth=0; planets.forEach(p=>{ const k=p.Rp*RE_RSUN/star.R; depth=Math.max(depth,k*k*1.15e6); });
+    ymin=-(depth*1.35); ymax=depth*0.45; if (noiseOn){ const s=SCATTER[S.id]/Math.sqrt(15); ymin=Math.min(ymin,-depth-3*s); ymax=Math.max(ymax,3*s); }
+    ylab='ppm'; f = t => -planets.reduce((s,p)=>s+deficit(p,star,t),0)*1e6; }
+  const t0=simJD-span/2, X=t=>L+(t-t0)/span*pw, Y=v=>T+(ymax-v)/(ymax-ymin)*ph;
+  // grid + axes
+  const step = niceStep((ymax-ymin)/4);
+  for(let v=Math.ceil(ymin/step)*step; v<=ymax; v+=step){ cx.beginPath(); cx.moveTo(L,Y(v)); cx.lineTo(L+pw,Y(v)); cx.stroke(); cx.fillText((Math.abs(v)<1e-9?0:Math.round(v)).toString(), 2, Y(v)+4); }
+  cx.fillText(ylab, 2, T+ph+14);
+  const off=2440587.5+69.184/86400, steps=[1,2,3,6,12,24,48,96,192]; let hStep=steps.find(st=>st/24/span*pw>=72)||192;
+  for(let h=Math.ceil(((t0-off)*24)/hStep)*hStep; h<=(t0+span-off)*24; h+=hStep){ const t=h/24+off; cx.beginPath(); cx.moveTo(X(t),T); cx.lineTo(X(t),T+ph); cx.stroke();
+    const d=jdToDate(t); const lab = hStep>=24? d.toISOString().slice(5,10) : d.toISOString().slice(11,16); cx.fillText(lab, X(t)-16, H-4); }
+  // noise
+  if (noiseOn && S.kind==='transit'){ const s=SCATTER[S.id]/Math.sqrt(15), dt=30/1440; cx.fillStyle='rgba(200,210,230,.55)';
+    for(let i=Math.ceil(t0/dt); i*dt<=t0+span; i++){ const t=i*dt; const v=f(t)+s*hashN(i); cx.fillRect(X(t)-1.2,Y(v)-1.2,2.4,2.4); } }
+  // model
+  cx.strokeStyle= S.kind==='rv' ? '#ffb454' : '#5ad1ff'; cx.lineWidth=1.8; cx.beginPath();
+  for(let i=0;i<=pw;i++){ const t=t0+i/pw*span, v=f(t); i?cx.lineTo(L+i,Y(v)):cx.moveTo(L+i,Y(v)); } cx.stroke(); cx.lineWidth=1;
+  // now marker
+  cx.strokeStyle='rgba(255,180,84,.9)'; cx.setLineDash([3,3]); cx.beginPath(); cx.moveTo(X(simJD),T); cx.lineTo(X(simJD),T+ph); cx.stroke(); cx.setLineDash([]);
+}
+function niceStep(x){ const p=Math.pow(10,Math.floor(Math.log10(x))), m=x/p; return (m<1.5?1:m<3.5?2:m<7.5?5:10)*p; }
+
+function renderLegend(){ const S=SYSTEMS[sysIdx];
+  $('#legend').innerHTML = S.kind==='rv'
+   ? `<span><i style="background:#ffb454"></i>star's velocity toward/away from us, model (K = 5.5 m/s)</span><span>HARPS nightly error ≈ 1.4 m/s</span>`
+   : `<span><i style="background:#5ad1ff"></i>brightness of ${S.hosts?'GJ 237 '+host+' (in its own light)':'the star'}, model with every planet</span>${noiseOn?'<span>dots: 30-min bins with the real TESS 2-min scatter</span>':''}<span>dashed: the moment shown above</span>`; }
+
+function nextEvent(fromJD){ const p=currentPlanets()[0]; const n=Math.ceil((fromJD-p.T0)/p.P); return p.T0+n*p.P; }
+
+function renderInfo(){
+  const S=SYSTEMS[sysIdx]; const facts = S.hosts ? (host==='A'?S.factsA:S.factsB) : S.facts;
+  const nx = nextEvent(jdNow());
+  $('#info').innerHTML = `
+   <button class="btn" id="collapse" aria-label="Collapse">–</button>
+   <h1>${S.name}</h1><div class="sub">${S.sub}</div>
+   <div class="body">
+   <span class="badge">PLANET CANDIDATE · NOT YET CONFIRMED</span>
+   ${S.hosts?`<div class="hostsw"><button class="btn ${host==='A'?'on':''}" data-h="A">If it orbits A</button><button class="btn ${host==='B'?'on':''}" data-h="B">If it orbits B</button></div>`:''}
+   <dl>${facts.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+   <div class="blurb">${S.blurb}</div>
+   <div class="next">${S.next.label}: <b>${fmtUTC(nx)}</b> <span class="cd">${S.next.sigma}</span><br><span class="cd" id="countdown"></span>
+   <div class="blurb" style="margin:6px 0 0">${S.next.test}</div></div>
+   <div class="links"><a href="${S.doi}" target="_blank" rel="noopener">Paper (free)</a>${PREREG.includes('PREREG')?'':`<a href="${PREREG}" target="_blank" rel="noopener">Predictions, registered in advance</a>`}<a href="${S.code}" target="_blank" rel="noopener">Code</a></div>
+   </div>`;
+  document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{ host=b.dataset.h; build(); });
+  const setC=()=>{$('#collapse').textContent=$('#info').classList.contains('min')?'+':'–';}; setC();
+  $('#collapse').onclick=()=>{ $('#info').classList.toggle('min'); setC(); };
+}
+function tickCountdown(){ const el=$('#countdown'); if(!el) return; const d=nextEvent(jdNow())-jdNow();
+  const days=Math.floor(d), hrs=Math.floor((d-days)*24), min=Math.floor(((d-days)*24-hrs)*60);
+  el.textContent = `in ${days} d ${hrs} h ${min} min (UTC times are barycentric, ±8 min)`; }
+
+// tabs ------------------------------------------------------------------------
+SYSTEMS.forEach((S,i)=>{ const b=document.createElement('button'); b.className='tab'; b.role='tab'; b.textContent=S.name; b.onclick=()=>select(i); $('#tabs').appendChild(b); });
+function select(i){ sysIdx=i; document.querySelectorAll('.tab').forEach((b,j)=>b.setAttribute('aria-selected', j===i));
+  $('#jump').textContent = SYSTEMS[i].kind==='rv' ? 'Next conjunction ▸' : 'Next transit ▸';
+  $('#noise').style.display = SYSTEMS[i].kind==='rv' ? 'none' : '';
+  try{ history.replaceState(null,'','#'+SYSTEMS[i].id); }catch(e){}
+  build(); }
+
+// controls --------------------------------------------------------------------
+$('#play').onclick=()=>{ playing=!playing; $('#play').textContent=playing?'Pause':'Play'; };
+$('#speed').onchange=e=>{ speed=+e.target.value; };
+$('#now').onclick=()=>{ simJD=jdNow(); };
+$('#jump').onclick=()=>{ const t=nextEvent(simJD+1e-3); const p=currentPlanets()[0]; const lead = SYSTEMS[sysIdx].kind==='rv'? 0.5 : (p.T14/24)*1.2;
+  simJD=t-lead; speed=0.0416667; $('#speed').value='0.0416667'; playing=true; $('#play').textContent='Pause'; };
+$('#earth').onclick=()=>{ earthView=!earthView; $('#earth').classList.toggle('on',earthView); if(earthView){ trueScale=true; $('#scale').classList.add('on'); build(); } else frameDefault(); };
+$('#scale').onclick=()=>{ trueScale=!trueScale; $('#scale').classList.toggle('on',trueScale); if(!trueScale&&earthView){earthView=false;$('#earth').classList.remove('on');} build(); };
+$('#noise').onclick=()=>{ noiseOn=!noiseOn; $('#noise').classList.toggle('on',noiseOn); renderLegend(); };
+
+function resize(){ const w=innerWidth, h=innerHeight; renderer.setSize(w,h); camera.aspect=w/h; if (world) applyOffset(); camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+
+let last=performance.now(), cdT=0;
+const CAPTURE = /[?&]capture\b/.test(location.search); // frame-by-frame mode used to record the demo video
+function loop(now){
+  const dt=Math.min(.1,(now-last)/1000); last=now;
+  if (playing && !CAPTURE) simJD += dt*speed;
+  frame(dt);
+  if (!CAPTURE) requestAnimationFrame(loop);
+}
+function frame(dt){
+  placeBodies(simJD); controls.update(); renderer.render(scene,camera);
+  // labels
+  const w=innerWidth, h=innerHeight;
+  labelEls.forEach(({el,posFn})=>{ const v=posFn(); world.localToWorld(v); v.project(camera);
+    const vis=v.z<1 && Math.abs(v.x)<1.2 && Math.abs(v.y)<1.2; el.style.display=vis?'':'none';
+    if(vis){ el.style.left=((v.x+1)/2*w)+'px'; el.style.top=((1-v.y)/2*h)+'px'; } });
+  $('#clock').textContent = fmtUTC(simJD);
+  drawPanel();
+  if ((cdT+=dt)>0.5){ cdT=0; tickCountdown(); }
+}
+if (CAPTURE) window.__cap = {
+  select:(id,h)=>{ if(h) host=h; select(SYSTEMS.findIndex(x=>x.id===id)); },
+  set:o=>{ if(o.jd!=null) simJD=o.jd; if(o.earth!=null && o.earth!==earthView) $('#earth').click(); if(o.scale!=null && o.scale!==trueScale) $('#scale').click(); if(o.rot!=null){controls.autoRotate=o.rot>0; controls.autoRotateSpeed=o.rot;} },
+  next:()=>nextEvent(simJD), step:d=>{ simJD+=d; frame(1/30); } };
+const startId = (location.hash||'').slice(1); const si = SYSTEMS.findIndex(s=>s.id===startId);
+if (innerWidth<=760) $('#info').classList.add('min');
+select(si>=0?si:0); requestAnimationFrame(loop);
+</script>
+</body>
+</html>
